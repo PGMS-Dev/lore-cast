@@ -48,6 +48,25 @@
 
 ---
 
+## 🎲 Imagine this
+
+You're on Discord with your players.
+A camera shows the battlefield with miniatures. Dice are rolling.
+
+And on a second screen…
+
+- A mission briefing appears — **CLASSIFIED**
+- The scene description shifts as the squad enters the ruins
+- The combat tracker lights up — initiative order, HP bars, status effects
+- A character sheet updates after a bad roll
+- A red alert flashes: `⚠ XENOS BREACH DETECTED — SECTOR 7 COMPROMISED`
+
+The game stays physical. The narrative becomes alive.
+
+That story your AI generates? It doesn't get lost in chat anymore. **Players see the world change.**
+
+---
+
 ## How it works
 
 ### 1. AI creates a session
@@ -149,7 +168,17 @@ This skill (the code in this repo) is **open source** and always will be.
 
 - 🌐 **Platform**: [lore-cast.com](https://lore-cast.com)
 - 🎮 **Join a game**: [lore-cast.com/join](https://lore-cast.com/join)
-- 🛠 **Backend repo**: [Herald](https://github.com/pgrandmont/Herald)
+
+---
+
+## What Lore-Cast is not
+
+- ❌ Not a VTT — there's no map editor, no token drag-and-drop
+- ❌ Not a chatbot — the AI doesn't talk *to* the players, it **broadcasts the world**
+- ❌ Not a wiki — content is live, ephemeral, session-driven
+
+Lore-Cast is a **live narrative broadcast layer** for tabletop games.
+A bridge between AI generation, Game Master control, and player immersion.
 
 ---
 
