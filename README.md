@@ -1,205 +1,159 @@
-# LoreCast
+# 🎲 Lore-Cast — AI-Augmented Game Master, Live
 
-**Your AI speaks. Your table sees it live.**
+[![lore-cast.com](https://img.shields.io/badge/🌐-lore--cast.com-blue)](https://lore-cast.com)
+[![Herald Backend](https://img.shields.io/badge/backend-Herald-green)](https://github.com/pgrandmont/Herald)
 
-LoreCast is a real-time companion screen for tabletop RPGs, skirmish campaigns, and AI-assisted game mastering.
+**[lore-cast.com](https://lore-cast.com)** — An AI Game Master that broadcasts a living world to your players in real time.
 
-A Game Master or AI agent can push structured content live to connected players: mission briefings, character sheets, faction lore, tactical updates, clues, narrative events, and more — all rendered instantly in the browser.
+> Your AI doesn't just *write* the story — it **runs the table**.
+> Scene descriptions, initiative trackers, character sheets, alerts — pushed live to every player's screen.
+> No apps to install. No accounts to create. Just a code and a browser. → **[lore-cast.com](https://lore-cast.com)**
 
-Whether you're running a classic RPG, a narrative skirmish campaign, or a grimdark 40k-style warband story over Discord with minis on camera, LoreCast gives your players a live second screen for the evolving world.
+> **📦 This repo** is the open-source AI skill that turns Claude into a Lore-Cast Game Master.
+> Looking for the platform? → **[lore-cast.com](https://lore-cast.com)**
+> Looking for the backend? → **[Herald](https://github.com/pgrandmont/Herald)**
 
----
+<p align="center">
+  <img src="assets/screenshot.png" alt="Lore-Cast — AI Game Master broadcasting live to players" width="800">
+  <br>
+  <i>A Deathwatch session on <a href="https://lore-cast.com">lore-cast.com</a> — briefing, scene, combat tracker, character sheet, and alert — all pushed live by the AI.</i>
+</p>
 
-## Why LoreCast?
+```
+┌─────────────────┐         ┌──────────────────────────────────┐
+│                 │  API    │          lore-cast.com           │
+│   AI Game       │────────▶│                                  │
+│   Master        │  push   │  ┌──────┐ ┌──────┐ ┌──────┐    │
+│  (Claude, etc.) │  zones  │  │ 📱   │ │ 💻   │ │ 📱   │    │
+│                 │         │  │ P1   │ │ P2   │ │ P3   │    │
+└─────────────────┘         │  └──────┘ └──────┘ └──────┘    │
+                            │   Players see updates instantly  │
+                            └──────────────────────────────────┘
+```
 
-A lot of AI tools can generate text.
-
-LoreCast makes that text **playable**.
-
-Instead of dumping walls of chat into Discord, an AI can become a real table companion:
-- publishing mission intel
-- updating the current objective
-- revealing NPCs, factions, and locations
-- showing character sheets and warband status
-- displaying live narrative handouts
-- keeping every player aligned without breaking immersion
-
-It turns AI output into a **shared live interface** for the table.
-
----
-
-## What it does
-
-LoreCast allows a GM or AI agent to:
-
-- create a live session
-- share a join link or code with players
-- push structured JSON content to predefined screen zones
-- update the player view in real time
-- keep mission data, sheets, lore, and events visible throughout the game
-
-Players simply open the session in their browser and follow the story as it evolves.
+**This is not a viewer.** This is what happens when the Game Master has an API.
 
 ---
 
-## Ideal use cases
+## Why Lore-Cast?
 
-LoreCast works especially well for:
-
-- **Tabletop RPG campaigns**
-- **Narrative skirmish games**
-- **Warhammer 40k / Mordheim-style campaign play**
-- **Discord-based remote sessions**
-- **Hybrid physical + digital tables**
-- **AI-assisted Game Mastering**
-- **Persistent campaign dashboards**
-
-Example setup:
-- players talk on **Discord**
-- a camera shows the **miniatures / battlefield**
-- LoreCast runs on a **second screen**
-- the AI or GM updates mission info, character sheets, event logs, lore fragments, and live consequences
+| Traditional RPG | With Lore-Cast |
+|---|---|
+| GM describes a scene verbally | AI pushes a styled scene card to every screen |
+| Players ask "wait, what's my HP?" | Initiative tracker updates live after every round |
+| GM fumbles through notes | AI generates and broadcasts briefings on the fly |
+| One player zones out | Alert banner: `⚠ XENOS BREACH DETECTED` — everyone's back |
+| "Can you repeat that?" | It's on their screen. Always. |
+| Player passes a note under the table | Private whisper to the AI GM — no one else sees it |
 
 ---
 
-## Core concept
+## How it works
 
-LoreCast is built around a simple idea:
+### 1. AI creates a session
 
-> **Let the AI narrate. Let the players see the world update live.**
+The AI calls `lore-cast.com/api/table/create` and gets back a room code + a secret token.
 
-The AI does not need to control the whole game.  
-It only needs to publish meaningful updates into the right places:
-- header
-- mission panel
-- player sheets
-- event feed
-- map notes
-- lore cards
-- status blocks
-- custom HTML zones
+### 2. Players join
 
-This makes LoreCast flexible enough for lightweight sessions or deeply immersive campaign play.
+Players go to **[lore-cast.com/join](https://lore-cast.com/join)**, enter the room name and 6-character code. No signup. No download.
 
----
+### 3. AI runs the game
 
-## Features
+As the story unfolds, the AI pushes structured content to **zones** — each zone is a part of the player's screen:
 
-- **Real-time player updates**
-- **Session-based live screens**
-- **Join by link or session code**
-- **Structured content zones**
-- **Custom HTML rendering**
-- **JSON-driven updates**
-- **Works great with AI heartbeat workflows**
-- **Browser-based player access**
-- **Perfect for second-screen play**
+| Zone | What players see |
+|------|-----------------|
+| **Briefing** | Mission card — dark background, red borders, classified header |
+| **Scene** | Narrative description — serif font, atmospheric tones |
+| **Initiative** | Combat tracker — names, HP bars, turn order, status effects |
+| **Character** | Data-slate — stats, chapter, specialty (Warhammer 40K style) |
+| **Alert** | Red warning banner — grabs attention instantly |
+| **Ambiance** | Italic centered text on black — sets the mood |
 
----
+```
+┌──────────────────────────────────┐
+│ ⚠ ALERT                         │  ← alert zone
+├──────────────────────────────────┤
+│ 📜 BRIEFING                     │  ← briefing zone
+│ CLASSIFIED — Operation Nightfall│
+├─────────────────┬────────────────┤
+│ 🎭 SCENE        │ ⚔ INITIATIVE  │
+│ The cathedral   │ 1. Brother Tor │
+│ looms ahead...  │ 2. Xenos Alpha │
+├─────────────────┴────────────────┤
+│ 🌑 ambiance                     │
+│ The void hums with ancient...   │
+└──────────────────────────────────┘
+```
 
-## AI-first workflow
+### 4. Players can whisper to the GM
 
-LoreCast is designed to work beautifully with AI agents.
-
-An agent such as Claude can:
-- maintain a campaign heartbeat
-- generate updates as the story evolves
-- publish formatted content to the session
-- keep player-facing information synchronized
-- act as a narrative assistant or full GM companion
-
-This makes LoreCast a strong foundation for:
-- AI co-GM experiences
-- living campaign dashboards
-- evolving mission control panels
-- persistent narrative worlds
+Private chat lets players message the AI Game Master directly — ask questions, attempt secret actions, negotiate with NPCs — without the other players knowing.
 
 ---
 
-## Example experience
+## The Skill — What this repo contains
 
-Imagine a 40k underhive campaign:
+This folder is an **open-source Claude Code skill** that teaches Claude how to be a Lore-Cast Game Master.
 
-- the squad enters a ruined manufactorum
-- the AI updates the mission objective live
-- a new enemy faction card appears on player screens
-- one player's injury sheet changes after a bad roll
-- the event feed announces a betrayal
-- a lore panel reveals a recovered data fragment
-- the battlefield is still physical, but the narrative layer becomes alive
+When installed, Claude can:
+- 🎮 **Create a game room** on lore-cast.com
+- 📡 **Push live content** to all connected players
+- 💬 **Chat privately** with individual players
+- 💓 **Monitor the session** (heartbeat, viewer count, connection status)
+- 🛑 **End the session** cleanly
 
-That is the kind of experience LoreCast is built for.
+### Files
 
----
-
-## Tech
-
-LoreCast is currently built with:
-
-- **Blazor Server**
-- **.NET 10**
-- real-time server-driven updates
-- structured player-facing rendering
+```
+skills/lore-cast/
+├── SKILL.md               # Full API reference & orchestration instructions for Claude
+├── heartbeat.py           # Background keepalive process (direct mode)
+├── browser_heartbeat.js   # Browser-injected keepalive (fallback mode)
+└── README.md              # ← You are here
+```
 
 ---
 
-## Current status
+## Try it now
 
-LoreCast is currently available in EAP and moving toward production.
+1. Open **[lore-cast.com](https://lore-cast.com)**
+2. In Claude Code (or any Claude tool with skill support), say:
+   *"Start a Lore-Cast session — Deathwatch campaign, 4 players"*
+3. Share the room code with your friends
+4. Watch as Claude runs the table
 
-It is actively being shaped as both:
-- a real tool for live tabletop play
-- a foundation for AI-native Game Master experiences
-
----
-
-## Vision
-
-LoreCast is not just a dashboard.
-
-It is the beginning of a new kind of tabletop interface:
-a space where **AI, narrative, and live player presentation** meet.
-
-Not a chatbot.
-Not a wiki.
-Not a VTT clone.
-
-A **live herald of the story**.
+No API key needed. No setup. The AI *is* the Game Master.
 
 ---
 
-## Repository goals
+## Pricing
 
-This repository exists to explore and build:
-- real-time narrative broadcasting for tabletop games
-- AI-driven session support
-- live mission and character display
-- immersive second-screen experiences for players
-- tools for hybrid physical/digital campaign play
+**[lore-cast.com](https://lore-cast.com)** is a SaaS platform.
 
----
+- 🧪 **Currently free** — open testing phase, all features available
+- 💰 **Paid plans coming** — with a free tier for casual use
 
-## Contributing
-
-LoreCast is evolving fast.
-
-If you're interested in:
-- tabletop UX
-- AI-driven RPG tools
-- narrative systems
-- live campaign interfaces
-- Blazor / .NET real-time applications
-
-feel free to open an issue, start a discussion, or contribute.
+This skill (the code in this repo) is **open source** and always will be.
 
 ---
 
-## Name
+## Built with
 
-**LoreCast** = broadcast the lore, live.
-
-Because the story should not stay trapped in the GM notes.
-
-It should unfold in front of the players.
+**[Herald](https://github.com/pgrandmont/Herald)** — the real-time engine behind [lore-cast.com](https://lore-cast.com). .NET 10 / Blazor Server / SignalR. Zero-account player access, AI-first API design, crypto-safe session tokens.
 
 ---
+
+## Links
+
+- 🌐 **Platform**: [lore-cast.com](https://lore-cast.com)
+- 🎮 **Join a game**: [lore-cast.com/join](https://lore-cast.com/join)
+- 🛠 **Backend repo**: [Herald](https://github.com/pgrandmont/Herald)
+
+---
+
+<p align="center">
+  <i>The table is set. The AI is ready. Your players are waiting.</i><br>
+  <b><a href="https://lore-cast.com">lore-cast.com</a></b>
+</p>
