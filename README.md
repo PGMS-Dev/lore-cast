@@ -1,7 +1,7 @@
 # 🎲 Lore-Cast — AI-Augmented Game Master, Live
 
 [![lore-cast.com](https://img.shields.io/badge/🌐-lore--cast.com-blue)](https://lore-cast.com)
-[![Herald Backend](https://img.shields.io/badge/backend-Herald-green)](https://github.com/pgrandmont/Herald)
+
 
 **[lore-cast.com](https://lore-cast.com)** — An AI Game Master that broadcasts a living world to your players in real time.
 
