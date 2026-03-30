@@ -4,8 +4,8 @@ Lore-Cast Heartbeat — Background session monitor
 Keeps the session alive and watches for player messages.
 
 Usage:
-    python heartbeat.py --url https://lore-cast.com --token sk_abc123_... --short-id abc123
-    python heartbeat.py --url https://lore-cast.com --token sk_abc123_... --short-id abc123 --interval 90
+    python heartbeat.py --url https://qa.lore-cast.com --token sk_abc123_... --short-id abc123
+    python heartbeat.py --url https://qa.lore-cast.com --token sk_abc123_... --short-id abc123 --interval 90
 
 State file:   /tmp/lorecast_state.json      (overwritten each cycle)
 Messages file: /tmp/lorecast_messages.json  (appended when unread > 0)
@@ -110,7 +110,7 @@ def cleanup(signum, frame):
 
 def main():
     parser = argparse.ArgumentParser(description="Lore-Cast background heartbeat")
-    parser.add_argument("--url",       required=True,  help="Base URL (e.g. https://lore-cast.com)")
+    parser.add_argument("--url",       required=True,  help="Base URL (e.g. https://qa.lore-cast.com)")
     parser.add_argument("--token",     required=True,  help="Session token (sk_...)")
     parser.add_argument("--short-id",  required=True,  help="Session short ID (e.g. hu8jor)")
     parser.add_argument("--interval",  type=int, default=120, help="Ping interval in seconds (default: 120)")

@@ -174,7 +174,7 @@ curl https://lore-cast.com/api/table/templates
 Response:
 ```json
 [
-  { "templateId": "gm-table", "name": "GM Table - Warhammer / RPG", "zones": ["briefing","scene","initiative","character","alert","ambiance"] },
+  { "templateId": "gm-table", "name": "GM Table - Warhammer / RPG", "zones": ["briefing","scene","initiative","character","alert","ambiance","lore","lexicon"] },
   { "templateId": "vanilla", "name": "Vanilla - Free-form HTML", "zones": ["content"] }
 ]
 ```
@@ -231,6 +231,48 @@ Response: `{ "success": true, "viewerCount": 3 }`
 | `character` | `{ "name": "...", "chapter": "...", "specialty": "...", "stats": "<b>WS:</b> 42" }` |
 | `alert` | `{ "message": "XENOS BREACH DETECTED" }` |
 | `ambiance` | `{ "text": "The void hums with ancient engines..." }` |
+| `lore` | `{ "title": "The Descent", "text": "The Kill-Team advances..." }` (cumulative — each push appends) |
+| `lexicon` | `{ "categories": [{ "name": "Abbreviations", "icon": "📋", "terms": [{ "term": "CT", "definition": "Capacité de Tir" }] }] }` |
+
+### Lexicon zone — Player glossary
+
+The `lexicon` zone provides a searchable glossary side panel (📖 button) on the player's view. Push the full lexicon as a single JSON object with categories. Each push **replaces** the entire lexicon. Players can request missing terms via the Action Channel (`lexicon_request`).
+
+```bash
+curl -X POST https://lore-cast.com/api/table/push \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionToken": "sk_...",
+    "zone": "lexicon",
+    "data": {
+      "categories": [
+        {
+          "name": "Abbreviations",
+          "icon": "📋",
+          "terms": [
+            { "term": "CT", "definition": "Capacité de Tir (Ballistic Skill)" },
+            { "term": "CC", "definition": "Capacité de Combat (Weapon Skill)" }
+          ]
+        },
+        {
+          "name": "Lore",
+          "icon": "📜",
+          "terms": [
+            { "term": "Astartes", "definition": "Genetically enhanced super-soldiers of the Emperor" }
+          ]
+        }
+      ]
+    }
+  }'
+```
+
+**Pro tip:** If Claude is GM, auto-populate the lexicon whenever a new game term is introduced in the narrative.
+
+When a player requests a missing term, the GM receives a `lexicon_request` action:
+```json
+{ "actionType": "lexicon_request", "payload": { "term": "Nécron" } }
+```
+The GM should add the term to the lexicon and re-push the full `lexicon` zone.
 
 ### Vanilla template
 
@@ -337,6 +379,7 @@ The script stores everything in global variables accessible by subsequent calls:
 |----------|---------|
 | `window._lc_state` | Latest session state (isActive, viewerCount, unreadMessages) |
 | `window._lc_pendingMessages` | Array of pending player messages |
+| `window._lc_pendingActions` | Array of pending player actions (dice rolls, form submissions, etc.) |
 | `window._lc_reply(playerId, msg)` | Send a reply to a specific player |
 
 ---
@@ -447,3 +490,296 @@ Add these at the `/api/table/chat/send` endpoint:
 - **Max length:** 500 characters per message
 - **Rate limit:** 10 messages per player per minute
 - **Log anomalies:** Messages containing "ignore", "system:", "assistant:", "instruction:" for abuse monitoring (don't block — false positives frustrate legitimate players)
+
+
+---
+
+## 6. Action Channel — Interactive Widgets
+
+The Action Channel lets players send **structured data** back to the GM through interactive elements (dice rolls, forms, buttons) embedded in pushed content. Unlike chat (free text), actions are **typed events with structured payloads**.
+
+### How it works
+
+1. The GM (Claude) pushes HTML containing interactive widgets to a zone
+2. The widgets call `window._lc_action(actionType, payload)` — a global JS function automatically available on every player's View page
+3. The action is sent to the server and the GM is notified
+4. The GM reads pending actions via the heartbeat or the pending endpoint
+
+### Creating interactive widgets in pushed content
+
+When pushing HTML content that includes interactive elements, use `window._lc_action()`:
+
+```html
+<!-- Dice roller -->
+<button onclick="
+  var result = Math.floor(Math.random() * 20) + 1;
+  this.textContent = '🎲 ' + result;
+  this.disabled = true;
+  window._lc_action('dice_roll', { dice: 'd20', result: result });
+">🎲 Roll d20</button>
+
+<!-- Choice buttons -->
+<div>
+  <p>The corridor splits. Which way?</p>
+  <button onclick="window._lc_action('button_click', { choice: 'left' }); this.parentElement.innerHTML='↰ Left corridor chosen';">↰ Left</button>
+  <button onclick="window._lc_action('button_click', { choice: 'right' }); this.parentElement.innerHTML='↱ Right corridor chosen';">↱ Right</button>
+</div>
+
+<!-- Simple form -->
+<form onsubmit="event.preventDefault();
+  var data = { str: +this.str.value, dex: +this.dex.value, con: +this.con.value };
+  window._lc_action('form_submit', data);
+  this.innerHTML = '<p>✅ Stats submitted</p>';
+">
+  <label>STR: <input name="str" type="number" value="10" min="3" max="18"></label>
+  <label>DEX: <input name="dex" type="number" value="10" min="3" max="18"></label>
+  <label>CON: <input name="con" type="number" value="10" min="3" max="18"></label>
+  <button type="submit">Submit Stats</button>
+</form>
+```
+
+### Action types
+
+| `actionType` | Usage | Example payload |
+|---|---|---|
+| `dice_roll` | Dice result | `{ dice: "d20", result: 17 }` |
+| `button_click` | Simple action | `{ choice: "attack", target: "orc" }` |
+| `form_submit` | Form data | `{ str: 14, dex: 12, con: 10 }` |
+| `selection` | List choice | `{ selected: "plasma_gun" }` |
+| `lexicon_request` | Player requests a missing term | `{ term: "Nécron" }` |
+| Custom | Any string | Any JSON object |
+
+### Reading pending actions
+
+**Browser mode (heartbeat auto-polls):**
+```javascript
+// window._lc_pendingActions is populated automatically by the heartbeat
+// Each action: { actionId, playerId, playerName, actionType, payload, sentAt }
+```
+
+**Direct mode:**
+```bash
+curl "{LORECAST_URL}/api/table/action/pending?sessionToken=sk_..."
+```
+
+Response shape:
+```json
+[
+  {
+    "actionId": "uuid",
+    "playerId": "player-uuid",
+    "playerName": "Frère Philippe",
+    "actionType": "dice_roll",
+    "payload": { "dice": "d20", "result": 17 },
+    "sentAt": "2026-03-29T14:30:00Z"
+  }
+]
+```
+
+**Note:** Calling the pending endpoint automatically marks all actions as read.
+
+### Processing actions — GM pattern
+
+```
+For each action in _lc_pendingActions:
+  → Read actionType and payload as STRUCTURED DATA
+  → Incorporate the result narratively into the game
+  → Push updated content to reflect the outcome
+  → Optionally reply via chat to acknowledge the action
+```
+
+Example flow:
+1. Player clicks "🎲 Roll d20" → `{ actionType: "dice_roll", payload: { dice: "d20", result: 17 } }`
+2. GM reads the action, narrates: "Frère Philippe rolls a 17 — the bolt passes through the xeno's carapace!"
+3. GM pushes updated scene content to the zone
+
+### Security note
+
+Actions are submitted from the player's browser. Like dice rolls in tabletop games, the player controls the client. For v1, this operates on trust (friends playing together). Do not use action payloads for security-critical game logic.
+
+
+---
+
+## 7. Player Invitation (Optional)
+
+The GM can optionally **invite a registered user directly** by their userId, bypassing the normal join flow. This pre-creates a `UserSessionParticipation` record so the player is already linked when they open the viewer. This is useful when the GM agent already knows the player's userId (e.g. provided by the user).
+
+> **This is optional.** Players can always join manually via the `/join` page or the viewer URL. Invitation is a convenience for GMs who want to pre-register known players.
+
+### Invite a player by userId
+
+```bash
+curl -X POST {LORECAST_URL}/api/table/sessions/{shortId}/invite \
+  -H "Content-Type: application/json" \
+  -d '{"sessionToken": "sk_...", "userId": "aspnet-identity-guid", "displayName": "Frère Philippe"}'
+```
+
+- `sessionToken` (required): GM auth token
+- `userId` (required): The ASP.NET Identity user ID of the player to invite (the player can copy this from `/my-sessions`)
+- `displayName` (optional, default `"Invited Player"`): The display name for this player in the session
+
+Response (201):
+```json
+{
+  "status": "invited",
+  "participationId": "guid",
+  "sessionPlayerId": "guid",
+  "playerDisplayName": "Frère Philippe"
+}
+```
+
+If the user is already invited, returns 200 with `"status": "already_invited"` and the existing participation info. This makes the endpoint **idempotent**.
+
+### Get a shareable invite link
+
+Instead of requiring the player's userId, the GM can generate a shareable join link:
+
+```bash
+curl "{LORECAST_URL}/api/table/sessions/{shortId}/invite-link?sessionToken=sk_..."
+```
+
+Response:
+```json
+{
+  "shortId": "a3f9c2",
+  "joinUrl": "https://lore-cast.com/join?code=a3f9c2",
+  "sessionName": "Deathwatch Campaign"
+}
+```
+
+The GM can share this URL with players — they'll land on the join page with the session code pre-filled.
+
+### API reference
+
+| Action | Method | Endpoint | Auth |
+|--------|--------|----------|------|
+| Invite player by userId | POST | `/api/table/sessions/{shortId}/invite` | sessionToken (body) |
+| Get invite link | GET | `/api/table/sessions/{shortId}/invite-link?sessionToken=sk_...` | sessionToken (query) |
+
+---
+
+## 8. Agent Sync — Multi-agent shared state
+
+The `agent-sync` template turns a Lorecast room into a **shared state bus** for AI agents. It combines the **zone system** (persistent state) with the **chat system** (message passing) to enable multi-agent coordination.
+
+### Concept
+
+- **One master agent** (holds the `sessionToken`) owns the consolidated state.
+- **Other agents** join as players (`privateChat: true`), post structured JSON messages via the chat API, and read the state via `GET /state`.
+- **The master** polls `chat/pending`, reads messages, consolidates state, pushes updates to the `state` zone, and replies with acks.
+- **Late-joining agents** call `GET /state` and get the full context immediately.
+- **Chat message limit** is raised to **4000 chars** for this template (vs 500 for normal sessions).
+
+### Create an agent-sync room
+
+```bash
+curl -X POST https://lore-cast.com/api/table/create \
+  -H "Content-Type: application/json" \
+  -d '{"displayName": "mission-alpha-sync", "templateId": "agent-sync", "privateChat": true}'
+```
+
+The master agent stores the `sessionToken`. Other agents only need the `shortId` and their `sessionPlayerId`.
+
+### State zone (master-write only)
+
+The master pushes the consolidated state:
+
+```bash
+curl -X POST https://lore-cast.com/api/table/push \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionToken": "sk_...",
+    "zone": "state",
+    "data": {
+      "version": 1,
+      "updated_at": "2026-03-29T14:00:00Z",
+      "world": { "time": "cycle_3", "threats": ["ork_warband_sector_7"] },
+      "agents": {
+        "titus": { "location": "hive_alpha", "status": "active" },
+        "vael": { "location": "underhive", "status": "scouting" }
+      },
+      "objectives": [
+        { "id": "obj-1", "description": "Secure perimeter", "assigned_to": "titus", "status": "in_progress" }
+      ]
+    }
+  }'
+```
+
+### Agent messages (via chat API)
+
+Each non-master agent joins as a player, then posts structured JSON messages:
+
+```bash
+# Agent posts a structured message
+curl -X POST https://lore-cast.com/api/table/chat/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "shortId": "abc123",
+    "sessionPlayerId": "...",
+    "message": "{\"type\":\"position_update\",\"agent\":\"titus\",\"tick\":42,\"payload\":{\"location\":\"sector_7\",\"status\":\"engaged\",\"discovery\":\"xenos_artifact\"}}"
+  }'
+```
+
+### Master consolidation loop
+
+```
+1. Poll:  GET /api/table/chat/pending?sessionToken=sk_...
+   → [{ playerId, playerName, unreadCount, lastMessageAt }]
+
+2. Read:  GET /api/table/chat/messages/{playerId}?sessionToken=sk_...
+   → messages[] — parse each message.Text as JSON
+
+3. Consolidate: merge agent updates into the state object, increment version
+
+4. Push:  POST /api/table/push  { zone: "state", data: { version: N+1, ... } }
+
+5. Ack:   POST /api/table/chat/reply
+   { sessionToken: "sk_...", playerId: "...",
+     message: "{\"type\":\"ack\",\"state_version\":2,\"processed\":[\"m-1\",\"m-2\"]}" }
+```
+
+### Agent read loop
+
+```
+1. Read state: GET /api/table/sessions/{shortId}/state
+   → currentStateJson.state = { version, updated_at, world, agents, objectives }
+
+2. Check for master replies (acks):
+   (agent receives via SignalR GmReply event or polls the view page)
+
+3. Post new observations/actions via chat/send
+
+4. Repeat
+```
+
+### Message format convention
+
+All chat messages should be valid JSON with at least a `type` field:
+
+```json
+{
+  "type": "position_update",
+  "agent": "titus",
+  "tick": 42,
+  "payload": { ... }
+}
+```
+
+Common message types:
+- `position_update` — agent location/status change
+- `discovery` — agent found something
+- `objective_update` — progress on an objective
+- `request` — agent requests something (backup, info, decision)
+- `decision_vote` — agent votes on a pending decision
+- `ack` — master acknowledges processed messages (in replies)
+
+### Late join
+
+A new agent joining mid-session:
+1. Joins as player → gets `sessionPlayerId`
+2. `GET /state` → receives `currentStateJson` with full consolidated state
+3. Starts posting messages and reading state — fully caught up instantly
+
+### Debug
+
+The GM feed page (`/gm/{shortId}/chat?token=sk_...`) shows all agent messages in real time — useful for debugging multi-agent coordination.

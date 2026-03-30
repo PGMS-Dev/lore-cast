@@ -45,6 +45,20 @@
         }
       }
 
+      // Also poll for pending player actions
+      try {
+        const actionsResp = await fetch(`/api/table/action/pending?sessionToken=${token}`);
+        const actions = await actionsResp.json();
+        if (Array.isArray(actions) && actions.length > 0) {
+          window._lc_pendingActions = actions;
+          console.warn(`[LoreCast] 🎲 ${actions.length} player action(s) — window._lc_pendingActions`);
+        } else {
+          window._lc_pendingActions = [];
+        }
+      } catch (e) {
+        console.warn('[LoreCast] Could not fetch pending actions:', e);
+      }
+
       // Warn in console if something needs attention
       if (!state.isActive) {
         console.error('[LoreCast] 💀 Session is no longer active! window._lc_state.isActive = false');
@@ -74,6 +88,7 @@
   console.log(`[LoreCast] 💓 Browser heartbeat started — session ${shortId}, interval ${intervalMs / 1000}s`);
   console.log('[LoreCast] Read state anytime with: window._lc_state');
   console.log('[LoreCast] Pending player messages: window._lc_pendingMessages');
+  console.log('[LoreCast] Pending player actions: window._lc_pendingActions');
   console.log('[LoreCast] Stop with: clearInterval(window._lc_heartbeatId)');
 
 // Also expose a convenience reply function for Claude to use
